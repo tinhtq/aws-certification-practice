@@ -4,7 +4,7 @@
 
 This project is an interactive AWS Certification practice application enhanced with Amazon Bedrock AI capabilities. It helps AWS certification candidates prepare for various AWS certification exams by providing practice questions with AI-enhanced explanations.
 
-![AWS Certification Practice App](https://example.com/app-screenshot.png)
+![AWS Certification Practice App](./images/practice-app.png)
 
 ## Features
 
@@ -26,7 +26,7 @@ The application uses a modern serverless architecture with the following compone
 4. **Amazon Bedrock**: AI service (Nova Pro model) for generating enhanced explanations
 5. **Infrastructure as Code**: Terraform for provisioning all AWS resources
 
-![Architecture Diagram](https://example.com/architecture-diagram.png)
+![Architecture Diagram](./images/architecture-diagram.png)
 
 ## How Amazon Q Developer Helped
 
