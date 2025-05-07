@@ -15,9 +15,10 @@ const docsLinks = awsDocsContent.querySelector('.docs-links');
 // API Configuration - Update these values after deploying the Terraform infrastructure
 const API_CONFIG = {
     // Replace with your API Gateway URL from Terraform output
-    apiUrl: "<api-output-url>/generate-explanation",
+    apiUrl: "YOUR_API_GATEWAY_URL/generate-explanation",
     // Replace with your API key from Terraform output
-    apiKey: "<api-key-here>"
+    // amazonq-ignore-next-line
+    apiKey: "YOUR_API_KEY_HERE"
 };
 
 // Format Bedrock response for better display

@@ -22,3 +22,10 @@ Thumbs.db
 Amazon AWS Certified Data Engineer Associate DEA-C01 Exam.pdf
 clean_questions.json
 clean_questions.py
+
+# Terraform files
+*.tfstate
+*.tfstate.*
+.terraform/
+terraform/.terraform/
+terraform/terraform.tfvars
