@@ -1,0 +1,421 @@
+// Amazon Bedrock helper functions for enhanced explanations with Claude 3 Sonnet (Nova Pro)
+
+// DOM Elements
+const getBedrockExplanationBtn = document.getElementById('getBedrockExplanationBtn');
+const getAwsDocsBtn = document.getElementById('getAwsDocsBtn');
+const enhancedExplanation = document.getElementById('enhancedExplanation');
+const bedrockExplanation = document.getElementById('bedrockExplanation');
+const bedrockSpinner = bedrockExplanation.querySelector('.loading-spinner');
+const bedrockContent = bedrockExplanation.querySelector('.explanation-content');
+const awsDocs = document.getElementById('awsDocs');
+const awsDocsContent = document.getElementById('awsDocsContent');
+const awsDocsSpinner = awsDocsContent.querySelector('.loading-spinner');
+const docsLinks = awsDocsContent.querySelector('.docs-links');
+
+// API Configuration - Update these values after deploying the Terraform infrastructure
+const API_CONFIG = {
+    // Replace with your API Gateway URL from Terraform output
+    apiUrl: "<api-output-url>/generate-explanation",
+    // Replace with your API key from Terraform output
+    apiKey: "<api-key-here>"
+};
+
+// Format Bedrock response for better display
+function formatBedrockResponse(text) {
+    if (!text) return '';
+    
+    // Replace markdown headers with HTML headers
+    text = text.replace(/^# (.*?)$/gm, '<h2>$1</h2>');
+    text = text.replace(/^## (.*?)$/gm, '<h3>$1</h3>');
+    text = text.replace(/^### (.*?)$/gm, '<h4>$1</h4>');
+    
+    // Format bold text
+    text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    
+    // Format italic text
+    text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
+    
+    // Format lists
+    text = text.replace(/^- (.*?)$/gm, '<li>$1</li>');
+    text = text.replace(/(<li>.*?<\/li>(\n|$))+/g, '<ul>$&</ul>');
+    
+    // Format paragraphs
+    text = text.replace(/^([^<\n].*?)$/gm, '<p>$1</p>');
+    
+    // Clean up any double paragraph tags
+    text = text.replace(/<p><p>/g, '<p>');
+    text = text.replace(/<\/p><\/p>/g, '</p>');
+    
+    // Add special styling for option labels
+    text = text.replace(/\*\*Option ([A-D]): (.*?)\*\*/g, '<div class="option-label"><strong>Option $1:</strong> $2</div>');
+    
+    // Add special styling for "Why It's Incorrect" sections
+    text = text.replace(/\*\*Why It's Incorrect:\*\*/g, '<div class="incorrect-reason"><strong>Why It\'s Incorrect:</strong></div>');
+    
+    // Add special styling for "Technical Details" sections
+    text = text.replace(/\*\*Technical Details:\*\*/g, '<div class="technical-details"><strong>Technical Details:</strong></div>');
+    
+    return text;
+}
+
+// Set up event listeners
+document.addEventListener('DOMContentLoaded', function() {
+    console.log("DOM content loaded, setting up event listeners");
+    if (getBedrockExplanationBtn) {
+        console.log("Found getBedrockExplanationBtn, adding click listener");
+        getBedrockExplanationBtn.addEventListener('click', getEnhancedExplanation);
+    } else {
+        console.error("getBedrockExplanationBtn not found in the DOM");
+    }
+    
+    if (getAwsDocsBtn) {
+        getAwsDocsBtn.addEventListener('click', getAwsDocumentation);
+    } else {
+        console.error("getAwsDocsBtn not found in the DOM");
+    }
+});
+
+// Current question data
+let currentQuestion = null;
+let currentOptions = null;
+let currentCorrectAnswer = null;
+let currentExplanation = null;
+
+// Update current question data
+function updateCurrentQuestionData(question, options, correctAnswerIndex, explanation) {
+    currentQuestion = question;
+    currentOptions = options;
+    currentCorrectAnswer = correctAnswerIndex;
+    currentExplanation = explanation;
+}
+
+// Get enhanced explanation from Amazon Bedrock
+async function getEnhancedExplanation() {
+    console.log("getEnhancedExplanation function called");
+    
+    if (!currentQuestion) {
+        console.log("No question data available");
+        alert('No question data available');
+        return;
+    }
+
+    console.log("Current question:", currentQuestion);
+    console.log("Current options:", currentOptions);
+    console.log("Current correct answer:", currentCorrectAnswer);
+
+    // Show the explanation container and loading spinner
+    enhancedExplanation.classList.remove('hidden');
+    bedrockSpinner.classList.remove('hidden');
+    bedrockContent.textContent = '';
+    console.log("Loading spinner displayed");
+
+    try {
+        // Call the API Gateway endpoint that connects to Bedrock
+        const explanation = await callBedrockAPI(
+            currentQuestion, 
+            currentOptions, 
+            currentCorrectAnswer, 
+            currentExplanation
+        );
+        
+        // Display the explanation
+        bedrockContent.innerHTML = formatBedrockResponse(explanation);
+        
+        // Add model info at the bottom
+        const modelInfoDiv = document.createElement('div');
+        modelInfoDiv.className = 'model-info';
+        modelInfoDiv.textContent = 'Generated by Amazon Bedrock Nova Pro';
+        bedrockContent.appendChild(modelInfoDiv);
+        
+        bedrockSpinner.classList.add('hidden');
+        console.log("Explanation displayed and spinner hidden");
+    } catch (error) {
+        console.error("Error in getEnhancedExplanation:", error);
+        bedrockSpinner.classList.add('hidden');
+        bedrockContent.innerHTML = `<div class="error-message">Error connecting to AWS Bedrock API: ${error.message}</div>`;
+    }
+}
+
+// Call the API Gateway endpoint that connects to Bedrock
+async function callBedrockAPI(question, options, correctAnswerIndex, basicExplanation) {
+    try {
+        // Check if API configuration is set
+        if (!API_CONFIG.apiUrl || API_CONFIG.apiUrl.includes("your-api-id")) {
+            throw new Error("API Gateway URL not configured. Please update the API_CONFIG in bedrock-helper.js.");
+        }
+        
+        if (!API_CONFIG.apiKey || API_CONFIG.apiKey === "your-api-key-here") {
+            throw new Error("API key not configured. Please update the API_CONFIG in bedrock-helper.js.");
+        }
+        
+        console.log("Calling API Gateway endpoint:", API_CONFIG.apiUrl);
+        
+        // Make the API request
+        const response = await fetch(API_CONFIG.apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': API_CONFIG.apiKey
+            },
+            body: JSON.stringify({
+                question,
+                options,
+                correctAnswerIndex,
+                explanation: basicExplanation
+            })
+        });
+        
+        // Check if the request was successful
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || `API returned ${response.status}`);
+        }
+        
+        // Parse the response
+        const data = await response.json();
+        return data.explanation;
+    } catch (error) {
+        console.error("Error calling Bedrock API:", error);
+        throw error;
+    }
+}
+
+// Get AWS documentation links
+async function getAwsDocumentation() {
+    if (!currentQuestion) {
+        alert('No question data available');
+        return;
+    }
+
+    // Show the docs container and loading spinner
+    awsDocs.classList.remove('hidden');
+    awsDocsSpinner.classList.remove('hidden');
+    docsLinks.innerHTML = '';
+
+    try {
+        // Extract AWS services mentioned in the question and options
+        const questionText = currentQuestion + ' ' + currentOptions.join(' ');
+        const services = extractAwsServices(questionText);
+        
+        // Get documentation links for each service
+        const links = await getDocLinks(services);
+        
+        // Display the links
+        if (links.length === 0) {
+            docsLinks.innerHTML = '<p>No relevant documentation found.</p>';
+        } else {
+            const linksList = document.createElement('ul');
+            links.forEach(link => {
+                const listItem = document.createElement('li');
+                const linkElement = document.createElement('a');
+                linkElement.href = link.url;
+                linkElement.textContent = link.title;
+                linkElement.target = '_blank';
+                listItem.appendChild(linkElement);
+                linksList.appendChild(listItem);
+            });
+            docsLinks.appendChild(linksList);
+        }
+    } catch (error) {
+        docsLinks.innerHTML = `<p>Error: ${error.message}</p>`;
+    } finally {
+        awsDocsSpinner.classList.add('hidden');
+    }
+}
+
+// Extract AWS services mentioned in the question
+function extractAwsServices(text) {
+    const services = new Set();
+    
+    // Common AWS services relevant to Data Engineering
+    const servicePatterns = [
+        { regex: /\b(?:Amazon\s+)?S3\b/i, service: 'S3' },
+        { regex: /\b(?:Amazon\s+)?Redshift\b/i, service: 'Redshift' },
+        { regex: /\b(?:AWS\s+)?Glue\b/i, service: 'Glue' },
+        { regex: /\b(?:Amazon\s+)?Athena\b/i, service: 'Athena' },
+        { regex: /\b(?:Amazon\s+)?Kinesis\b/i, service: 'Kinesis' },
+        { regex: /\b(?:Amazon\s+)?EMR\b/i, service: 'EMR' },
+        { regex: /\b(?:AWS\s+)?Lambda\b/i, service: 'Lambda' },
+        { regex: /\b(?:Amazon\s+)?DynamoDB\b/i, service: 'DynamoDB' },
+        { regex: /\b(?:Amazon\s+)?RDS\b/i, service: 'RDS' },
+        { regex: /\b(?:Amazon\s+)?Aurora\b/i, service: 'Aurora' },
+        { regex: /\b(?:AWS\s+)?Lake\s*Formation\b/i, service: 'Lake Formation' },
+        { regex: /\b(?:Amazon\s+)?MSK\b|Managed\s+Streaming\s+for\s+Kafka/i, service: 'MSK' },
+        { regex: /\b(?:Amazon\s+)?OpenSearch\b|Elasticsearch/i, service: 'OpenSearch' },
+        { regex: /\b(?:AWS\s+)?Data\s+Pipeline\b/i, service: 'Data Pipeline' },
+        { regex: /\b(?:Amazon\s+)?QuickSight\b/i, service: 'QuickSight' },
+        { regex: /\b(?:AWS\s+)?Step\s+Functions\b/i, service: 'Step Functions' },
+        { regex: /\b(?:Amazon\s+)?SQS\b/i, service: 'SQS' },
+        { regex: /\b(?:Amazon\s+)?SNS\b/i, service: 'SNS' },
+        { regex: /\b(?:AWS\s+)?Batch\b/i, service: 'Batch' },
+        { regex: /\b(?:AWS\s+)?KMS\b/i, service: 'KMS' },
+        { regex: /\b(?:AWS\s+)?IAM\b/i, service: 'IAM' },
+        { regex: /\b(?:AWS\s+)?CloudWatch\b/i, service: 'CloudWatch' },
+        { regex: /\b(?:AWS\s+)?CloudTrail\b/i, service: 'CloudTrail' },
+        { regex: /\b(?:Amazon\s+)?EventBridge\b/i, service: 'EventBridge' },
+        { regex: /\b(?:AWS\s+)?AppFlow\b/i, service: 'AppFlow' },
+        { regex: /\b(?:AWS\s+)?DataSync\b/i, service: 'DataSync' },
+        { regex: /\b(?:AWS\s+)?Transfer\s+Family\b/i, service: 'Transfer Family' },
+        { regex: /\b(?:AWS\s+)?DMS\b|Database\s+Migration\s+Service/i, service: 'DMS' }
+    ];
+    
+    // Check for each service pattern in the text
+    servicePatterns.forEach(pattern => {
+        if (pattern.regex.test(text)) {
+            services.add(pattern.service);
+        }
+    });
+    
+    return Array.from(services);
+}
+
+// Get documentation links for AWS services
+async function getDocLinks(services) {
+    const links = [];
+    
+    // Documentation links for common AWS data engineering services
+    const docLinks = {
+        'S3': [
+            { title: 'Amazon S3 Developer Guide', url: 'https://docs.aws.amazon.com/AmazonS3/latest/dev/Welcome.html' },
+            { title: 'S3 Data Engineering Best Practices', url: 'https://docs.aws.amazon.com/AmazonS3/latest/userguide/optimizing-performance.html' }
+        ],
+        'Redshift': [
+            { title: 'Amazon Redshift Developer Guide', url: 'https://docs.aws.amazon.com/redshift/latest/dg/welcome.html' },
+            { title: 'Redshift Best Practices', url: 'https://docs.aws.amazon.com/redshift/latest/dg/best-practices.html' }
+        ],
+        'Glue': [
+            { title: 'AWS Glue Developer Guide', url: 'https://docs.aws.amazon.com/glue/latest/dg/what-is-glue.html' },
+            { title: 'Glue ETL Programming Guide', url: 'https://docs.aws.amazon.com/glue/latest/dg/aws-glue-programming.html' }
+        ],
+        'Athena': [
+            { title: 'Amazon Athena User Guide', url: 'https://docs.aws.amazon.com/athena/latest/ug/what-is.html' },
+            { title: 'Athena Best Practices', url: 'https://docs.aws.amazon.com/athena/latest/ug/performance-tuning.html' }
+        ],
+        'Kinesis': [
+            { title: 'Amazon Kinesis Developer Guide', url: 'https://docs.aws.amazon.com/streams/latest/dev/introduction.html' },
+            { title: 'Kinesis Data Firehose', url: 'https://docs.aws.amazon.com/firehose/latest/dev/what-is-this-service.html' }
+        ],
+        'EMR': [
+            { title: 'Amazon EMR Developer Guide', url: 'https://docs.aws.amazon.com/emr/latest/DeveloperGuide/emr-what-is-emr.html' },
+            { title: 'EMR Best Practices', url: 'https://docs.aws.amazon.com/emr/latest/ManagementGuide/emr-plan.html' }
+        ],
+        'Lambda': [
+            { title: 'AWS Lambda Developer Guide', url: 'https://docs.aws.amazon.com/lambda/latest/dg/welcome.html' },
+            { title: 'Lambda Best Practices', url: 'https://docs.aws.amazon.com/lambda/latest/dg/best-practices.html' }
+        ],
+        'DynamoDB': [
+            { title: 'Amazon DynamoDB Developer Guide', url: 'https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Introduction.html' },
+            { title: 'DynamoDB Best Practices', url: 'https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/best-practices.html' }
+        ],
+        'RDS': [
+            { title: 'Amazon RDS User Guide', url: 'https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Welcome.html' },
+            { title: 'RDS Best Practices', url: 'https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/CHAP_BestPractices.html' }
+        ],
+        'Aurora': [
+            { title: 'Amazon Aurora User Guide', url: 'https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/CHAP_AuroraOverview.html' },
+            { title: 'Aurora Best Practices', url: 'https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/Aurora.BestPractices.html' }
+        ],
+        'Lake Formation': [
+            { title: 'AWS Lake Formation Developer Guide', url: 'https://docs.aws.amazon.com/lake-formation/latest/dg/what-is-lake-formation.html' },
+            { title: 'Lake Formation Best Practices', url: 'https://docs.aws.amazon.com/lake-formation/latest/dg/best-practices.html' }
+        ],
+        'MSK': [
+            { title: 'Amazon MSK Developer Guide', url: 'https://docs.aws.amazon.com/msk/latest/developerguide/what-is-msk.html' },
+            { title: 'MSK Best Practices', url: 'https://docs.aws.amazon.com/msk/latest/developerguide/bestpractices.html' }
+        ],
+        'OpenSearch': [
+            { title: 'Amazon OpenSearch Service Developer Guide', url: 'https://docs.aws.amazon.com/opensearch-service/latest/developerguide/what-is.html' },
+            { title: 'OpenSearch Best Practices', url: 'https://docs.aws.amazon.com/opensearch-service/latest/developerguide/bp.html' }
+        ],
+        'Data Pipeline': [
+            { title: 'AWS Data Pipeline Developer Guide', url: 'https://docs.aws.amazon.com/datapipeline/latest/DeveloperGuide/what-is-datapipeline.html' }
+        ],
+        'QuickSight': [
+            { title: 'Amazon QuickSight User Guide', url: 'https://docs.aws.amazon.com/quicksight/latest/user/welcome.html' }
+        ],
+        'Step Functions': [
+            { title: 'AWS Step Functions Developer Guide', url: 'https://docs.aws.amazon.com/step-functions/latest/dg/welcome.html' },
+            { title: 'Step Functions Data Science SDK', url: 'https://docs.aws.amazon.com/step-functions/latest/dg/concepts-python-sdk.html' }
+        ],
+        'SQS': [
+            { title: 'Amazon SQS Developer Guide', url: 'https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/welcome.html' }
+        ],
+        'SNS': [
+            { title: 'Amazon SNS Developer Guide', url: 'https://docs.aws.amazon.com/sns/latest/dg/welcome.html' }
+        ],
+        'Batch': [
+            { title: 'AWS Batch User Guide', url: 'https://docs.aws.amazon.com/batch/latest/userguide/what-is-batch.html' }
+        ],
+        'KMS': [
+            { title: 'AWS KMS Developer Guide', url: 'https://docs.aws.amazon.com/kms/latest/developerguide/overview.html' }
+        ],
+        'IAM': [
+            { title: 'AWS IAM User Guide', url: 'https://docs.aws.amazon.com/IAM/latest/UserGuide/introduction.html' },
+            { title: 'IAM Best Practices', url: 'https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html' }
+        ],
+        'CloudWatch': [
+            { title: 'Amazon CloudWatch User Guide', url: 'https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/WhatIsCloudWatch.html' }
+        ],
+        'CloudTrail': [
+            { title: 'AWS CloudTrail User Guide', url: 'https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudtrail-user-guide.html' }
+        ],
+        'EventBridge': [
+            { title: 'Amazon EventBridge User Guide', url: 'https://docs.aws.amazon.com/eventbridge/latest/userguide/what-is-amazon-eventbridge.html' }
+        ],
+        'AppFlow': [
+            { title: 'Amazon AppFlow User Guide', url: 'https://docs.aws.amazon.com/appflow/latest/userguide/what-is-appflow.html' }
+        ],
+        'DataSync': [
+            { title: 'AWS DataSync User Guide', url: 'https://docs.aws.amazon.com/datasync/latest/userguide/what-is-datasync.html' }
+        ],
+        'Transfer Family': [
+            { title: 'AWS Transfer Family User Guide', url: 'https://docs.aws.amazon.com/transfer/latest/userguide/what-is-aws-transfer-family.html' }
+        ],
+        'DMS': [
+            { title: 'AWS Database Migration Service User Guide', url: 'https://docs.aws.amazon.com/dms/latest/userguide/Welcome.html' },
+            { title: 'DMS Best Practices', url: 'https://docs.aws.amazon.com/dms/latest/userguide/CHAP_BestPractices.html' }
+        ]
+    };
+    
+    // Add links for each detected service
+    services.forEach(service => {
+        if (docLinks[service]) {
+            links.push(...docLinks[service]);
+        }
+    });
+    
+    // Add general AWS Data Engineering links if no specific services found or as additional resources
+    if (links.length === 0 || services.length < 2) {
+        links.push(
+            { title: 'AWS Data Engineering Resources', url: 'https://aws.amazon.com/big-data/datalakes-and-analytics/' },
+            { title: 'AWS Data Engineering Patterns', url: 'https://docs.aws.amazon.com/prescriptive-guidance/latest/patterns/data-analytics.html' },
+            { title: 'AWS Certified Data Engineer Associate Guide', url: 'https://aws.amazon.com/certification/certified-data-engineer-associate/' }
+        );
+    }
+    
+    return links;
+}
+
+// Function to be called when showing an explanation
+function setupExplanationEnhancements(question, options, correctAnswerIndex, explanation) {
+    console.log("setupExplanationEnhancements called with:", {
+        question,
+        options,
+        correctAnswerIndex,
+        explanation
+    });
+    
+    updateCurrentQuestionData(question, options, correctAnswerIndex, explanation);
+    console.log("Current question data updated");
+    
+    // Reset UI elements
+    enhancedExplanation.classList.add('hidden');
+    awsDocs.classList.add('hidden');
+    bedrockContent.textContent = '';
+    docsLinks.innerHTML = '';
+    console.log("UI elements reset");
+}
+
+// Export functions for use in script.js
+window.setupExplanationEnhancements = setupExplanationEnhancements;
+console.log("setupExplanationEnhancements function exported to window object");

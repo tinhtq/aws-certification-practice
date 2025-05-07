@@ -1,0 +1,20 @@
+# AWS region for all resources
+aws_region = "us-east-1"
+
+# AWS Bedrock model ID
+# amazon.nova-pro-v1:0 - Nova Pro model
+# anthropic.claude-3-sonnet-20240229-v1:0 - Claude 3 Sonnet
+# anthropic.claude-3-haiku-20240307-v1:0 - Claude 3 Haiku
+bedrock_model_id = "amazon.nova-pro-v1:0"
+
+# Model parameters
+max_tokens = 4096
+temperature = 0.7
+top_p = 0.9
+
+# API Gateway configuration
+api_stage_name = "prod"
+
+# API Key for authentication
+# IMPORTANT: Replace this with a secure API key for production use
+api_key_value = "aws-community-builder-exam-practice-key-2025"

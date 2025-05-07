@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AWS Data Engineer Certification Practice</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- AWS SDK v2 with Bedrock support -->
+    <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1500.0.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>AWS Certified Data Engineer Associate (DEA-C01)</h1>
+            <h2>Tinhtq</h2>
+        </header>
+
+        <div class="controls">
+            <div class="file-upload">
+                <label for="jsonFile">Import Questions (JSON):</label>
+                <input type="file" id="jsonFile" accept=".json">
+                <button id="importBtn">Import</button>
+            </div>
+            <div class="practice-controls">
+                <button id="startBtn" disabled>Start Practice</button>
+                <button id="resetBtn" disabled>Reset Progress</button>
+                <span id="progressInfo">No questions loaded</span>
+            </div>
+        </div>
+
+        <div id="questionContainer" class="hidden">
+            <div class="question-header">
+                <span id="questionNumber">Question 1/50</span>
+                <span id="timer">00:00</span>
+            </div>
+            <div class="question-content">
+                <p id="questionText"></p>
+                <div id="options" class="options"></div>
+            </div>
+            <div class="question-footer">
+                <button id="submitBtn">Submit Answer</button>
+                <button id="nextBtn" class="hidden">Next Question</button>
+            </div>
+        </div>
+
+        <div id="resultContainer" class="hidden">
+            <h2>Explanation</h2>
+            <div id="explanation"></div>
+            <div class="enhancement-tools">
+                <button id="getBedrockExplanationBtn" class="enhancement-btn">Get AI-Enhanced Explanation</button>
+                <button id="getAwsDocsBtn" class="enhancement-btn">View AWS Documentation</button>
+            </div>
+            <div id="enhancedExplanation" class="hidden">
+                <h3>AI-Enhanced Explanation</h3>
+                <div id="bedrockExplanation" class="bedrock-explanation">
+                    <div class="loading-spinner hidden"></div>
+                    <div class="explanation-content"></div>
+                </div>
+            </div>
+            <div id="awsDocs" class="hidden">
+                <h3>Relevant AWS Documentation</h3>
+                <div id="awsDocsContent" class="aws-docs-content">
+                    <div class="loading-spinner hidden"></div>
+                    <div class="docs-links"></div>
+                </div>
+            </div>
+            <div class="result-footer">
+                <button id="continueBtn">Continue</button>
+            </div>
+        </div>
+
+        <div id="summaryContainer" class="hidden">
+            <h2>Practice Summary</h2>
+            <p id="summaryText"></p>
+            <div class="summary-stats">
+                <div>
+                    <span>Correct:</span>
+                    <span id="correctCount">0</span>
+                </div>
+                <div>
+                    <span>Incorrect:</span>
+                    <span id="incorrectCount">0</span>
+                </div>
+                <div>
+                    <span>Accuracy:</span>
+                    <span id="accuracy">0%</span>
+                </div>
+                <div>
+                    <span>Time Spent:</span>
+                    <span id="timeSpent">00:00</span>
+                </div>
+            </div>
+            <div class="summary-footer">
+                <button id="restartBtn">Restart Practice</button>
+                <button id="reviewBtn">Review Incorrect</button>
+            </div>
+        </div>
+
+        <div id="sampleJson" class="hidden">
+            <h3>Sample JSON Format</h3>
+            <pre id="jsonFormat"></pre>
+        </div>
+    </div>
+
+    <footer>
+        <p>AWS Data Engineer Certification Practice App</p>
+        <button id="showSampleBtn">Show Sample JSON Format</button>
+    </footer>
+
+    <script src="script.js"></script>
+    <script src="bedrock-helper.js"></script>
+</body>
+</html>
